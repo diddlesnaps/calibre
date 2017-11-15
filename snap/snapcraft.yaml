@@ -1,15 +1,211 @@
-name: my-snap-name # you probably want to 'snapcraft register <name>'
-version: '0.1' # just for humans, typically '1.2+git' or '1.3.2'
-summary: Single-line elevator pitch for your amazing snap # 79 char long summary
+name: calibre
+version: '3.12.0'
+summary: Calibre is the one stop solution to all your e-book needs
 description: |
-  This is my-snap's description. You have a paragraph or two to tell the
-  most important story about your snap. Keep it under 100 words though,
-  we live in tweetspace and your description wants to look good in the snap
-  store.
+  Calibre is a powerful and easy to use e-book manager. Users say it’s
+  outstanding and a must-have. It’ll allow you to do nearly everything and it
+  takes things a step beyond normal e-book software. It’s also completely free
+  and open source and great for both casual users and computer experts.
 
-confinement: devmode # use 'strict' once you have the right plugs and slots
+grade: devel
+confinement: devmode
+
+apps:
+  calibre:
+    command: desktop-launch $SNAP/usr/bin/calibre
+    environment:
+      CALIBRE_PYTHON_PATH: $SNAP/usr/lib/calibre
+      CALIBRE_RESOURCES_PATH: $SNAP/usr/share/calibre
+      CALIBRE_EXTENSIONS_PATH: $SNAP/usr/lib/calibre/calibre/plugins
+      CALIBRE_EXECUTABLES_PATH: $SNAP/usr/bin
+    plugs:
+      - desktop
+      - home
+      - removable-media
+      - wayland
+      - x11
 
 parts:
-  my-part:
-    # See 'snapcraft plugins'
+  patches:
+    plugin: dump
+    source: patches
+    prime: [-*]
+
+  dukpy:
+    plugin: python
+    source: https://github.com/kovidgoyal/dukpy/archive/v0.3.tar.gz
+
+  mozjpeg:
+    plugin: autotools
+    source: https://github.com/mozilla/mozjpeg/releases/download/v3.1/mozjpeg-3.1-release-source.tar.gz
+    build-packages:
+      - nasm
+      - libjpeg-turbo8-dev
+    stage-packages:
+      - libjpeg-turbo8
+
+  unrar:
+    after: [patches]
+    plugin: make
+    source: http://www.rarlab.com/rar/unrarsrc-5.5.8.tar.gz
+    prepare: |
+      git apply $SNAPCRAFT_STAGE/unrar.patch
+    build: |
+      make
+      make lib
+    install: |
+      make DESTDIR=$SNAPCRAFT_PART_INSTALL install
+      make DESTDIR=$SNAPCRAFT_PART_INSTALL install-lib
+    build-packages:
+      - g++
+
+  calibre:
+    after: [desktop-qt5, dukpy, mozjpeg, unrar]
     plugin: nil
+    source: https://github.com/kovidgoyal/calibre.git
+    source-tag: 'v3.12.0'
+    source-depth: 1
+    prepare: |
+      pip install --upgrade pip
+      pip install --root=$SNAPCRAFT_PART_INSTALL --prefix=/usr \
+        apsw \
+        html5-parser \
+        pillow \
+        pycrypto \
+        webencodings
+      env UNRAR_INCLUDE=../../unrar/build UNRAR_LIB=$SNAPCRAFT_STAGE/usr/lib \
+        pip install --root=$SNAPCRAFT_PART_INSTALL --prefix=/usr unrardll
+    build: |
+      env SIP_DIR=/usr/share/sip python2 setup.py build
+    install: |
+      env SIP_DIR=/usr/share/sip python2 setup.py install --no-postinstall --prefix=$SNAPCRAFT_PART_INSTALL/usr
+    # python-version: python2
+    # python-packages:
+    #   # - chardet
+    #   # - cssutils
+    #   # - dateutil
+    #   # - dnspython
+    #   - html5-parser
+    #   # - html5lib
+    #   # - lxml
+    #   # - mechanize
+    #   # - msgpack
+    #   # - netifaces
+    #   - pillow
+    #   # - psutil
+    #   - pycrypto
+    #   # - pygments
+    #   # - regex
+    #   # - six
+    #   - unrardll
+    #   - webencodings
+    build-packages:
+      # - bzip2
+      - libchm-dev
+      - libdbus-glib-1-dev
+      - libexpat1-dev
+      - libffi-dev
+      - libfontconfig1-dev
+      - libfreetype6-dev
+      - libgcrypt20-dev
+      - libglib2.0-dev
+      - libgpg-error-dev
+      - libicu-dev
+      - libjxr-dev
+      - libmtdev-dev
+      - libmtp-dev
+      - libncurses5-dev
+      - libpng-dev
+      - libpodofo-dev
+      - libpoppler-dev
+      - libqt5webkit5-dev
+      - libreadline-dev
+      - libsqlite3-dev
+      - libssl-dev
+      - libusb-1.0-0-dev
+      - libwebp-dev
+      - libxml2-dev
+      - libxslt1-dev
+      # - optipng
+      - pyqt5-dev
+      - python
+      - python-chardet
+      - python-cssutils
+      - python-dateutil
+      - python-dbus
+      - python-dnspython
+      - python-html5lib
+      - python-lxml
+      - python-mechanize
+      - python-msgpack
+      - python-netifaces
+      - python-pip
+      - python-psutil
+      - python-pygments
+      - python-pyqt5
+      - python-regex
+      - python-setuptools
+      - python-sip-dev
+      - python-six
+      - qtbase5-private-dev
+      - qt5-default
+      - qt5-qmake
+      - zlib1g
+    stage-packages:
+      - bzip2
+      - libchm1
+      - libdbus-glib-1-2
+      - libexpat1
+      - libffi6
+      - libfontconfig1
+      - libfreetype6
+      - libgcrypt20
+      - libgl1
+      - libgl1-mesa-glx
+      - libglib2.0-0
+      - libgpg-error0
+      - libicu55
+      - libjxr0
+      - libmtdev1
+      - libmtp9
+      - libncurses5
+      - libpng16-16
+      - libpodofo0.9.3
+      - libpoppler58
+      - libqt5core5a
+      - libqt5dbus5
+      - libqt5gui5
+      - libqt5network5
+      - libqt5printsupport5
+      - libqt5sql5
+      - libqt5test5
+      - libqt5webkit5
+      - libqt5widgets5
+      - libqt5xml5
+      - libreadline6
+      - libsqlite3-0
+      - libssl1.0.0
+      - libusb-1.0-0
+      - libwebp5
+      - libxml2
+      - libxslt1.1
+      - optipng
+      - python
+      - python-chardet
+      - python-cssutils
+      - python-dateutil
+      - python-dbus
+      - python-dnspython
+      - python-html5lib
+      - python-lxml
+      - python-mechanize
+      - python-msgpack
+      - python-netifaces
+      - python-psutil
+      - python-pygments
+      - python-pyqt5
+      - python-regex
+      - python-setuptools
+      - python-sip
+      - python-six
+      - zlib1g
